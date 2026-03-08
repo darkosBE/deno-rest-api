@@ -1,19 +1,26 @@
-import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
+import { FreshContext } from "$fresh/server.ts";
 
-serve(async (req) => {
+export const handler = async (req: Request, ctx: FreshContext): Promise<Response> => {
   const url = new URL(req.url);
   const target = `http://darknode.spxo.ru:20259${url.pathname}${url.search}`;
 
-  const response = await fetch(target, {
-    method: req.method,
-    headers: req.headers,
-    body: req.body,
-  });
+  const headers = new Headers(req.headers);
+  headers.set("Host", "darknode.spxo.ru");
 
-  return new Response(response.body, {
-    status: response.status,
-    headers: response.headers,
-  });
-}, { port: 8000 });
+  try {
+    const response = await fetch(target, {
+      method: req.method,
+      headers,
+      body: req.body,
+      redirect: "manual",
+    });
 
-console.log("Proxy running on port 8000");
+    return new Response(response.body, {
+      status: response.status,
+      headers: response.headers,
+    });
+  } catch (e: unknown) {
+    const error = e as Error;
+    return new Response(`Proxy error: ${error.message}`, { status: 500 });
+  }
+};
